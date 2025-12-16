@@ -1,0 +1,38 @@
+# =============================================================================
+# SmartHomeHubDoeb - Full Stack Docker Compose
+# =============================================================================
+
+version: "3.8"
+
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: smarthome-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+    networks:
+      - smarthome
+
+  api:
+    build: ./api
+    container_name: smarthome-api
+    ports:
+      - "80:7071"
+    volumes:
+      - ./dashboard:/app/../dashboard:ro
+    depends_on:
+      - mqtt-broker
+    restart: unless-stopped
+    networks:
+      - smarthome
+
+networks:
+  smarthome:
+    driver: bridge
+

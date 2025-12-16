@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartHomeHubDoeb</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#e8e8e8;min-height:100vh;padding:20px}
+        .container{max-width:1200px;margin:0 auto}
+        header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;flex-wrap:wrap;gap:20px}
+        h1{color:#00ff88;font-size:2rem}
+        .clock-box{background:#1a1a25;border:2px solid #00ff88;border-radius:12px;padding:15px 25px;text-align:center}
+        .clock{font-size:2.5rem;font-weight:700;font-family:monospace;color:#00ff88}
+        .clock-info{font-size:0.7rem;color:#666;margin-top:5px}
+        .indicators{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+        .ind{padding:8px 16px;border-radius:20px;font-size:0.8rem;display:flex;align-items:center;gap:6px;background:rgba(136,136,136,0.1);color:#666}
+        .ind.on{background:rgba(0,255,136,0.2);color:#00ff88}
+        .ind.heat-on{background:rgba(255,107,53,0.2);color:#ff6b35}
+        .ind-dot{width:8px;height:8px;border-radius:50%;background:#444}
+        .ind.on .ind-dot{background:#00ff88;animation:pulse 1s infinite}
+        .ind.heat-on .ind-dot{background:#ff6b35;animation:pulse 1s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+        .card{background:#1a1a25;border:1px solid #2a2a3a;border-radius:16px;padding:24px}
+        .card h2{font-size:1.1rem;margin-bottom:20px}
+        .room{background:#12121a;padding:16px;border-radius:12px;margin-bottom:12px;position:relative}
+        .room.active{border:1px solid #00ff88;box-shadow:0 0 20px rgba(0,255,136,0.2)}
+        .room.active::before{content:'';position:absolute;top:10px;right:10px;width:12px;height:12px;background:#00ff88;border-radius:50%;animation:glow 1s infinite alternate}
+        @keyframes glow{from{box-shadow:0 0 5px #00ff88}to{box-shadow:0 0 20px #00ff88}}
+        .room-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+        .status{font-size:0.85rem;color:#888}.status.on{color:#00ff88;font-weight:bold}
+        .toggle{position:relative;width:50px;height:26px}.toggle input{opacity:0;width:0;height:0}
+        .slider{position:absolute;cursor:pointer;inset:0;background:#2a2a3a;border-radius:26px;transition:0.3s}
+        .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:#888;border-radius:50%;transition:0.3s}
+        input:checked+.slider{background:#00ff88}input:checked+.slider:before{transform:translateX(24px);background:#0a0a0f}
+        .auto-row{display:flex;align-items:center;gap:8px;font-size:0.85rem;color:#888;margin-top:10px}.auto-row input{accent-color:#00ff88}
+        .time-inputs{display:flex;gap:10px;margin-top:10px}.time-inputs input{background:#0a0a0f;border:1px solid #2a2a3a;padding:8px;border-radius:8px;color:#e8e8e8;width:100%}
+        .heat-card.active{border:1px solid #ff6b35;box-shadow:0 0 20px rgba(255,107,53,0.2)}
+        .heat-indicator{position:absolute;top:15px;right:15px;width:16px;height:16px;background:#ff6b35;border-radius:50%;display:none;animation:heatglow 0.8s infinite alternate}
+        .heat-card.active .heat-indicator{display:block}@keyframes heatglow{from{box-shadow:0 0 5px #ff6b35}to{box-shadow:0 0 20px #ff6b35}}
+        .temp-display{text-align:center;padding:30px;background:linear-gradient(135deg,#12121a,#1a1a25);border-radius:16px;margin-bottom:20px}
+        .current-temp{font-size:4rem;font-weight:700;color:#ff6b35}
+        .target-temp{display:flex;align-items:center;justify-content:center;gap:20px;margin-top:20px}
+        .temp-btn{width:50px;height:50px;border-radius:50%;border:2px solid #2a2a3a;background:#12121a;color:#e8e8e8;font-size:1.5rem;cursor:pointer}
+        .temp-btn:hover{border-color:#ff6b35;color:#ff6b35}
+        .heat-status{text-align:center;margin-bottom:15px;padding:10px;border-radius:8px;font-weight:500}
+        .heat-status.on{background:rgba(255,107,53,0.2);color:#ff6b35}.heat-status.off{background:rgba(136,136,136,0.1);color:#888}
+        .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+        .cost-item{padding:20px;background:#12121a;border-radius:12px;text-align:center}
+        .cost-item.active{border:1px solid #00ff88}.cost-item.gas-active{border:1px solid #ff6b35}
+        .cost-value{font-size:2rem;font-weight:700;color:#00ff88}.cost-value.gas{color:#ff6b35}
+        .cost-label{font-size:0.85rem;color:#888;margin-top:4px}
+        .total{text-align:center;padding:20px;background:linear-gradient(135deg,rgba(0,255,136,0.1),rgba(255,107,53,0.1));border-radius:12px;margin-bottom:16px}
+        .total-value{font-size:2.5rem;font-weight:700}
+        .btn{width:100%;padding:12px;background:transparent;border:1px solid #2a2a3a;border-radius:8px;color:#e8e8e8;cursor:pointer}
+        .btn:hover{border-color:#00ff88;color:#00ff88}
+        footer{text-align:center;margin-top:40px;color:#888;font-size:0.85rem}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 SmartHomeHubDoeb</h1>
+            <div class="clock-box">
+                <div style="font-size:0.75rem;color:#888">SIMULATED TIME</div>
+                <div class="clock" id="sim-clock">06:00</div>
+                <div class="clock-info">1 hour = 40 sec | Full day = 16 min</div>
+            </div>
+        </header>
+        <div class="indicators" id="indicators"></div>
+        <div class="grid">
+            <div class="card"><h2>💡 Lights</h2><div id="lights"></div></div>
+            <div class="card heat-card" id="heat-card" style="position:relative">
+                <div class="heat-indicator"></div>
+                <h2>🔥 Heating</h2>
+                <div class="heat-status off" id="heat-status">HEATING OFF</div>
+                <div class="temp-display">
+                    <div class="current-temp" id="current-temp">18°C</div>
+                    <div style="color:#888">Current Temperature</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <span>Heating System</span>
+                    <label class="toggle"><input type="checkbox" id="heating-toggle" onchange="toggleHeating()"><span class="slider"></span></label>
+                </div>
+                <div class="target-temp">
+                    <button class="temp-btn" onclick="adjustTemp(-1)">−</button>
+                    <span><span id="target-temp">22</span>°C Target</span>
+                    <button class="temp-btn" onclick="adjustTemp(1)">+</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>💰 Costs (PLN)</h2>
+                <div class="cost-grid">
+                    <div class="cost-item" id="elec-box"><div class="cost-value" id="elec-cost">0</div><div class="cost-label">⚡ Electricity<br>10 PLN/10s per light</div></div>
+                    <div class="cost-item" id="gas-box"><div class="cost-value gas" id="gas-cost">0</div><div class="cost-label">🔥 Gas<br>5 PLN/10s heating</div></div>
+                </div>
+                <div class="total"><div style="color:#888">Total</div><div class="total-value" id="total-cost">0 PLN</div></div>
+                <button class="btn" onclick="resetCosts()">Reset Costs</button>
+            </div>
+        </div>
+        <footer>SmartHomeHubDoeb • Azure VM France Central • Demo Mode (40s = 1 hour)</footer>
+    </div>
+<script>
+const socket=io();let state=null;
+socket.on('state_update',d=>{state=d;render();});
+socket.on('cost_update',c=>{if(state)state.costs=c;renderCosts(c);});
+socket.on('time_update',d=>{document.getElementById('sim-clock').textContent=d.sim_time;});
+function render(){renderLights();renderHeating();renderIndicators();}
+function renderIndicators(){const el=document.getElementById('indicators');let h='';for(const[room,l]of Object.entries(state.lights)){h+=`<div class="ind ${l.on?'on':''}"><span class="ind-dot"></span>💡 ${room.replace('_',' ')}</div>`;}h+=`<div class="ind ${state.heating.enabled?'heat-on':''}"><span class="ind-dot"></span>🔥 Heating</div>`;el.innerHTML=h;}
+function renderLights(){const el=document.getElementById('lights');el.innerHTML='';for(const[room,l]of Object.entries(state.lights)){el.innerHTML+=`<div class="room ${l.on?'active':''}"><div class="room-header"><span style="text-transform:capitalize">${room.replace('_',' ')}</span><div style="display:flex;align-items:center;gap:12px"><span class="status ${l.on?'on':''}">${l.on?'ON':'OFF'}</span><label class="toggle"><input type="checkbox" ${l.on?'checked':''} onchange="toggleLight('${room}',this.checked)"><span class="slider"></span></label></div></div><div class="auto-row"><input type="checkbox" ${l.auto_mode?'checked':''} onchange="toggleAuto('${room}',this.checked)"> Time-based auto</div><div class="time-inputs" style="display:${l.auto_mode?'flex':'none'}"><input type="time" value="${l.on_time}" onchange="setTime('${room}','on_time',this.value)"><input type="time" value="${l.off_time}" onchange="setTime('${room}','off_time',this.value)"></div></div>`;}}
+function renderHeating(){const on=state.heating.enabled;document.getElementById('heating-toggle').checked=on;document.getElementById('current-temp').textContent=state.heating.current_temp+'°C';document.getElementById('target-temp').textContent=state.heating.target_temp;document.getElementById('heat-card').className='card heat-card'+(on?' active':'');const hs=document.getElementById('heat-status');hs.textContent=on?'🔥 HEATING ON':'HEATING OFF';hs.className='heat-status '+(on?'on':'off');}
+function renderCosts(c){document.getElementById('elec-cost').textContent=c.electricity_total;document.getElementById('gas-cost').textContent=c.gas_total;document.getElementById('total-cost').textContent=(c.electricity_total+c.gas_total)+' PLN';const lightsOn=state&&Object.values(state.lights).some(l=>l.on);document.getElementById('elec-box').className='cost-item'+(lightsOn?' active':'');document.getElementById('gas-box').className='cost-item'+(state?.heating.enabled?' gas-active':'');}
+async function toggleLight(room,on){await fetch(`/api/lights/${room}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on})});}
+async function toggleAuto(room,auto_mode){await fetch(`/api/lights/${room}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_mode})});}
+async function setTime(room,field,value){await fetch(`/api/lights/${room}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});}
+async function toggleHeating(){await fetch('/api/heating',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:document.getElementById('heating-toggle').checked})});}
+async function adjustTemp(d){await fetch('/api/heating',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target_temp:state.heating.target_temp+d})});}
+async function resetCosts(){await fetch('/api/costs/reset',{method:'POST'});}
+fetch('/api/state').then(r=>r.json()).then(d=>{state=d;render();renderCosts(d.costs);document.getElementById('sim-clock').textContent=d.sim_time||'06:00';});
+</script>
+</body>
+</html>
+

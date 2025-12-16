@@ -1,0 +1,46 @@
+@startuml C4_Component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component Diagram - SmartHomeHubDoeb Flask API
+
+Container_Boundary(api, "Flask API Container") {
+    
+    Component(flask_app, "Flask Application", "Python Flask", "Main web application framework handling HTTP requests")
+    
+    Component(socketio, "Socket.IO Server", "Flask-SocketIO", "WebSocket server for real-time bidirectional communication")
+    
+    Component(routes, "API Routes", "Flask Routes", "REST endpoints:\n- GET /api/state\n- POST /api/lights/<room>\n- POST /api/heating\n- POST /api/costs/reset")
+    
+    Component(state_manager, "State Manager", "Python Dict", "In-memory device state:\n- Lights (living_room, bedroom, kitchen)\n- Heating (enabled, target_temp)\n- Costs (electricity, gas totals)")
+    
+    Component(time_controller, "Time Controller", "Background Thread", "Simulated 24h clock (40s = 1 hour)\nAutomatic light ON/OFF based on schedules")
+    
+    Component(cost_calculator, "Cost Calculator", "Background Thread", "Calculates costs every 10 seconds:\n- 10 PLN per active light\n- 5 PLN when heating enabled")
+    
+    Component(static_server, "Static File Server", "Flask Static", "Serves dashboard HTML/CSS/JS files")
+}
+
+Container_Ext(dashboard, "Web Dashboard", "Browser application")
+Container_Ext(mqtt, "MQTT Broker", "Mosquitto")
+
+Rel(flask_app, routes, "Registers")
+Rel(flask_app, socketio, "Integrates")
+Rel(flask_app, static_server, "Serves static files")
+
+Rel(routes, state_manager, "Reads/Updates state")
+Rel(routes, socketio, "Emits state updates")
+
+Rel(time_controller, state_manager, "Updates light states")
+Rel(time_controller, socketio, "Emits time updates")
+
+Rel(cost_calculator, state_manager, "Reads device states")
+Rel(cost_calculator, socketio, "Emits cost updates")
+
+Rel(dashboard, flask_app, "HTTP requests", "REST")
+Rel(dashboard, socketio, "Real-time updates", "WebSocket")
+Rel(routes, mqtt, "Publishes commands", "MQTT")
+
+@enduml
+

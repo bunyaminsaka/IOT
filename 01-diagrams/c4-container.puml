@@ -1,0 +1,38 @@
+@startuml C4_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram - SmartHomeHubDoeb
+
+Person(homeowner, "Home Owner", "Controls smart home and monitors costs")
+
+System_Boundary(azure_vm, "Azure Virtual Machine (Ubuntu 24.04 LTS)") {
+    
+    Container(dashboard, "Web Dashboard", "HTML5, CSS3, JavaScript, Socket.IO", "Real-time control interface with:\n- Light controls (3 rooms)\n- Heating control\n- Time-based automation\n- Cost tracking display\n- Simulated 24h clock\n- Visual indicators")
+    
+    Container(api, "Flask API", "Python, Flask, Flask-SocketIO, Eventlet", "REST API + WebSocket server:\n- Device state management\n- Time-based automation engine\n- Cost calculator (10 PLN/light, 5 PLN/gas)\n- Real-time event broadcasting")
+    
+    Container(mqtt_broker, "MQTT Broker", "Eclipse Mosquitto 2.0", "Message broker for IoT devices:\n- TCP listener :1883\n- WebSocket listener :9001\n- Pub/Sub messaging")
+    
+    ContainerDb(state, "In-Memory State", "Python Dictionary", "Stores device states:\n- Light ON/OFF status\n- Heating settings\n- Automation schedules\n- Cost totals")
+}
+
+System_Ext(iot_devices, "IoT Devices / Simulators", "Temperature sensors, motion detectors, smart devices sending MQTT messages")
+
+System_Ext(browser, "Web Browser", "User's browser accessing the dashboard")
+
+Rel(homeowner, browser, "Uses")
+Rel(browser, dashboard, "Loads dashboard", "HTTP :80")
+Rel(browser, api, "Real-time updates", "WebSocket")
+Rel(browser, api, "API calls", "HTTP REST")
+
+Rel(dashboard, api, "Served by", "Static files")
+Rel(api, state, "Reads/Writes device state")
+Rel(api, mqtt_broker, "Publishes commands", "MQTT")
+
+Rel(iot_devices, mqtt_broker, "Sends telemetry", "MQTT :1883")
+Rel(mqtt_broker, iot_devices, "Receives commands", "MQTT :1883")
+
+@enduml
+
