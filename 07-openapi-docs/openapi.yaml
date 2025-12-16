@@ -1,0 +1,118 @@
+openapi: 3.0.3
+info:
+  title: SmartHomeHubDoeb API
+  description: REST API for IoT Smart Home System
+  version: 1.0.0
+  contact:
+    name: SmartHomeHubDoeb Team
+
+servers:
+  - url: http://40.66.52.113
+    description: Azure VM (France Central)
+
+paths:
+  /api/state:
+    get:
+      summary: Get system state
+      responses:
+        '200':
+          description: Current system state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemState'
+
+  /api/lights/{room}:
+    post:
+      summary: Control light
+      parameters:
+        - name: room
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [living_room, bedroom, kitchen]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LightControl'
+      responses:
+        '200':
+          description: Success
+
+  /api/heating:
+    post:
+      summary: Control heating
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeatingControl'
+      responses:
+        '200':
+          description: Success
+
+  /api/costs/reset:
+    post:
+      summary: Reset cost counters
+      responses:
+        '200':
+          description: Costs reset
+
+components:
+  schemas:
+    SystemState:
+      type: object
+      properties:
+        lights:
+          type: object
+        heating:
+          $ref: '#/components/schemas/HeatingState'
+        costs:
+          $ref: '#/components/schemas/CostState'
+        sim_time:
+          type: string
+
+    LightControl:
+      type: object
+      properties:
+        on:
+          type: boolean
+        auto_mode:
+          type: boolean
+        on_time:
+          type: string
+        off_time:
+          type: string
+
+    HeatingControl:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        target_temp:
+          type: integer
+
+    HeatingState:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        target_temp:
+          type: integer
+        current_temp:
+          type: integer
+
+    CostState:
+      type: object
+      properties:
+        electricity_rate:
+          type: integer
+        gas_rate:
+          type: integer
+        electricity_total:
+          type: integer
+        gas_total:
+          type: integer
+
