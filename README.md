@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🏠 SmartHomeHubDoeb
 
 **IoT Smart Home System** - Complete smart home solution deployed on Azure VM
@@ -81,7 +82,8 @@ Open: `http://YOUR_VM_IP`
 
 SmartHomeHubDoeb - IoT Project
 
+bünyamin yahya saka, deniz vardal, emir yumrukkaya, ömer boran
+
 ## 📄 License
 
 Educational Project
-
